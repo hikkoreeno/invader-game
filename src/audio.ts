@@ -185,6 +185,19 @@ export class AudioManager {
   }
 
   /**
+   * 速度段階アップ音
+   */
+  playSpeedStageUp(): void {
+    // 緊迫感を表現する上昇音
+    const notes = [220, 330, 440]; // 段階的に上昇
+    notes.forEach((freq, index) => {
+      setTimeout(() => {
+        this.playBeep(freq, 0.1, 0.4, 'square');
+      }, index * 50);
+    });
+  }
+
+  /**
    * AudioContextの状態を取得
    */
   getAudioContextState(): string {

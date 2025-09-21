@@ -139,11 +139,16 @@ class SpaceInvadersGame {
     }
 
     // インベーダー隊列の更新
-    const newEnemyBullets = this.invaderGrid.update(deltaTime, currentTime);
-    this.enemyBullets.push(...newEnemyBullets);
+    const updateResult = this.invaderGrid.update(deltaTime, currentTime);
+    this.enemyBullets.push(...updateResult.bullets);
+    
+    // 速度段階が変わった場合の音響効果
+    if (updateResult.stageChanged) {
+      this.audioManager.playSpeedStageUp();
+    }
     
     // 敵の射撃音
-    if (newEnemyBullets.length > 0) {
+    if (updateResult.bullets.length > 0) {
       this.audioManager.playEnemyShoot();
     }
 
@@ -450,12 +455,16 @@ class SpaceInvadersGame {
     const aliveEnemies = this.invaderGrid.getAliveCount();
     this.ctx.fillText(`Enemies: ${aliveEnemies}`, 20, 120);
     
-    // 現在の敵速度（デバッグ情報として表示）
+    // 現在の敵速度段階を表示
+    const currentStage = this.invaderGrid.getCurrentSpeedStage();
     const currentSpeed = this.invaderGrid.getCurrentSpeed();
     const speedMultiplier = (currentSpeed / GAME_CONFIG.ENEMY_MOVE_SPEED).toFixed(1);
-    this.ctx.fillStyle = '#ffff00';
+    
+    // 段階に応じて色を変更
+    const stageColors = ['#00ff00', '#ffff00', '#ff8800', '#ff0000'];
+    this.ctx.fillStyle = stageColors[currentStage - 1] || '#00ff00';
     this.ctx.font = '16px "Courier New", monospace';
-    this.ctx.fillText(`Speed: x${speedMultiplier}`, 20, 150);
+    this.ctx.fillText(`Stage ${currentStage} (x${speedMultiplier})`, 20, 150);
   }
 
   /**

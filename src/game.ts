@@ -21,10 +21,10 @@ export const GAME_CONFIG = {
   ENEMY_WIDTH: 48,  // 60 → 48 (80%)
   ENEMY_HEIGHT: 32, // 40 → 32 (80%)
   ENEMY_ROWS: 5,
-  ENEMY_COLS: 7,    // 10 → 7列に変更
+  ENEMY_COLS: 9,    // 7 → 9列に変更
   ENEMY_SPACING_X: 64,  // 80 → 64 (80%)
   ENEMY_SPACING_Y: 40,  // 50 → 40 (80%)
-  ENEMY_START_X: 80,  // 7列用に中央配置
+  ENEMY_START_X: 88,  // 9列用に中央配置 ((800-(9*64-16))/2)
   ENEMY_START_Y: 80,
   ENEMY_MOVE_SPEED: 20, // px/s (ゆっくりとした動き)
   ENEMY_DROP_DISTANCE: 20,
@@ -459,6 +459,7 @@ export class InvaderGrid {
   public lastMoveTime: number = 0;
   public lastShootTime: number = 0;
   private baseY: number;
+  private previousSpeedStage: number = 1; // 前回の速度段階を記録
 
   constructor() {
     this.baseY = GAME_CONFIG.ENEMY_START_Y;
@@ -480,7 +481,7 @@ export class InvaderGrid {
   }
 
   /**
-   * 現在の高度に基づいて動的な移動速度を計算
+   * 現在の高度に基づいて4段階の移動速度を計算
    */
   private getCurrentMoveSpeed(): number {
     const aliveEnemies = this.enemies.filter(enemy => enemy.isAlive);
@@ -493,20 +494,56 @@ export class InvaderGrid {
     const initialY = this.baseY;
     const descentDistance = lowestY - initialY;
     
-    // 降下距離に応じて速度を増加（最大3倍まで）
-    // 200px降下するごとに速度が約1.5倍になる
-    const speedMultiplier = 1 + (descentDistance / 200) * 0.5;
-    const maxSpeedMultiplier = 3.0; // 最大3倍まで
+    // 4段階の速度設定
+    const speedStages = [
+      { threshold: 0,   multiplier: 1.0 },   // 段階1: 通常速度
+      { threshold: 100, multiplier: 1.5 },   // 段階2: 1.5倍速
+      { threshold: 200, multiplier: 2.2 },   // 段階3: 2.2倍速
+      { threshold: 300, multiplier: 3.0 }    // 段階4: 3倍速（最高速）
+    ];
     
-    const finalMultiplier = Math.min(speedMultiplier, maxSpeedMultiplier);
-    return GAME_CONFIG.ENEMY_MOVE_SPEED * finalMultiplier;
+    // 現在の降下距離に応じた段階を決定
+    let currentMultiplier = speedStages[0].multiplier;
+    for (const stage of speedStages) {
+      if (descentDistance >= stage.threshold) {
+        currentMultiplier = stage.multiplier;
+      } else {
+        break;
+      }
+    }
+    
+    return GAME_CONFIG.ENEMY_MOVE_SPEED * currentMultiplier;
+  }
+
+  /**
+   * 現在の速度段階を取得（UI表示用）
+   */
+  getCurrentSpeedStage(): number {
+    const aliveEnemies = this.enemies.filter(enemy => enemy.isAlive);
+    if (aliveEnemies.length === 0) return 1;
+
+    const lowestY = Math.max(...aliveEnemies.map(enemy => enemy.y));
+    const descentDistance = lowestY - this.baseY;
+    
+    if (descentDistance >= 300) return 4;      // 段階4
+    else if (descentDistance >= 200) return 3; // 段階3
+    else if (descentDistance >= 100) return 2; // 段階2
+    else return 1;                             // 段階1
   }
 
   /**
    * 隊列の更新
    */
-  update(_deltaTime: number, currentTime: number): Bullet[] {
+  update(_deltaTime: number, currentTime: number): { bullets: Bullet[], stageChanged: boolean } {
     const newBullets: Bullet[] = [];
+
+    // 現在の速度段階をチェック
+    const currentStage = this.getCurrentSpeedStage();
+    const stageChanged = currentStage !== this.previousSpeedStage;
+    
+    if (stageChanged) {
+      this.previousSpeedStage = currentStage;
+    }
 
     // 動的速度を取得
     const currentSpeed = this.getCurrentMoveSpeed();
@@ -527,7 +564,7 @@ export class InvaderGrid {
       this.lastShootTime = currentTime;
     }
 
-    return newBullets;
+    return { bullets: newBullets, stageChanged };
   }
 
   /**
@@ -670,6 +707,7 @@ export class InvaderGrid {
     this.moveDirection = 1;
     this.lastMoveTime = 0;
     this.lastShootTime = 0;
+    this.previousSpeedStage = 1; // 速度段階もリセット
     this.createEnemies();
   }
 }
