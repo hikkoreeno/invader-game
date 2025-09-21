@@ -26,7 +26,7 @@ export const GAME_CONFIG = {
   ENEMY_SPACING_Y: 40,  // 50 → 40 (80%)
   ENEMY_START_X: 88,  // 9列用に中央配置 ((800-(9*64-16))/2)
   ENEMY_START_Y: 80,
-  ENEMY_MOVE_SPEED: 20, // px/s (ゆっくりとした動き)
+  ENEMY_MOVE_SPEED: 12, // px/s (より遅い動き)
   ENEMY_DROP_DISTANCE: 20,
   ENEMY_SHOOT_INTERVAL: 2000, // ms
   SCORE_PER_ENEMY: 10,
